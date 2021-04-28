@@ -30,19 +30,19 @@ def block_by_brand(ltable, rtable):
     em.set_key(ltable, 'id')
     em.set_key(rtable, 'id')
     ob = em.OverlapBlocker()
-    cand_set = ob.block_tables(ltable, rtable, 'title', 'title', word_level=True, overlap_size=5,
+    cand_set = ob.block_tables(ltable, rtable, 'title', 'title', word_level=True, overlap_size=4,
                                l_output_attrs=['id', 'title', 'category', "brand", 'modelno', 'price'],
                                r_output_attrs=['id', 'title', 'category', "brand", 'modelno', 'price'],
                                show_progress=False, rem_stop_words=True)
     ab = em.AttrEquivalenceBlocker()
-    double_cs = ab.block_candset(cand_set, 'modelno', 'modelno', show_progress=False, allow_missing=True)
-    double_cs = ab.block_candset(double_cs, 'brand', 'brand', show_progress=False, allow_missing=True)
+    double_cs = ab.block_candset(cand_set, 'modelno', 'modelno', show_progress=False, allow_missing=False)
+    # double_cs = ab.block_candset(double_cs, 'brand', 'brand', show_progress=False, allow_missing=True)
     '''cand_set = ab.block_tables(ltable, rtable, 'brand', 'brand',
                                l_output_attrs=['id', 'title', 'category', "brand", 'modelno', 'price'],
                                r_output_attrs=['id', 'title', 'category', "brand", 'modelno', 'price'],
                                )
     double_cs = ob.block_candset(cand_set, 'modelno', 'modelno', show_progress=False)'''
-    #double_cs = em.combine_blocker_outputs_via_union([cand_set, double_cs])
+    # double_cs = em.combine_blocker_outputs_via_union([cand_set, double_cs])
     cs_id_df = double_cs.loc[:, ['ltable_id', 'rtable_id']]
     candset = cs_id_df.values.tolist()
 
@@ -81,7 +81,7 @@ def feature_engineering(LR):
         features.append(j_sim)
         features.append(l_dist)
     features = np.array(features).T
-    print(len(features[0]))
+    #print(len(features[0]))
     return features
 
 
@@ -96,14 +96,14 @@ training_label = train.label.values
 
 
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
-gb = GradientBoostingClassifier(max_features=10,n_estimators=100, learning_rate=.1, max_depth=1, random_state=0)
-gb.fit(training_features,training_label)
-y_pred = gb.predict(candset_features)
-rf = RandomForestClassifier(class_weight="balanced", random_state=0)
-#rf.fit(training_features, training_label)
 
+gb = GradientBoostingClassifier(max_features=10, n_estimators=100, learning_rate=.1, max_depth=1, random_state=0)
+gb.fit(training_features, training_label)
 y_pred = gb.predict(candset_features)
+rf = RandomForestClassifier(random_state=0)
+rf.fit(training_features, training_label)
 
+#y_pred = rf.predict(candset_features)
 
 # 5. output
 
@@ -118,6 +118,6 @@ pred_pairs = [pair for pair in matching_pairs if
 pred_pairs = np.array(pred_pairs)
 pred_df = pd.DataFrame(pred_pairs, columns=["ltable_id", "rtable_id"])
 
-print(pred_df.to_string)
+#print(pred_df.to_string)
 pred_df.to_csv("output.csv", index=False)
 
